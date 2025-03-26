@@ -3,45 +3,60 @@ import matplotlib.pyplot as plt
 from generator import generate_initial_data
 from optimal_generator import generate_optimal_data
 from MT_solver import IterativeMTSolver
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import as_completed
 
 def analyze_results(num_replace, log_data):
-    """增强版结果分析函数"""
-    # 创建双轴图表
-    fig, ax1 = plt.subplots(figsize=(14, 7))
+    """三指标分图可视化"""
+    plt.figure(figsize=(18, 5))
     
-    # 绘制MSE主曲线
+    # MSE趋势图
+    plt.subplot(1, 3, 1)
     mse_values = [entry["mse"] for entry in log_data["improvements"]]
-    line_mse, = ax1.plot(mse_values, 'b-', label="MSE")
-    ax1.scatter(
-        [i for i, entry in enumerate(log_data["improvements"]) if entry["improved"]],
-        [entry["mse"] for entry in log_data["improvements"] if entry["improved"]],
-        color='b', marker='o', s=60, edgecolor='k', label="Valid Improvement"
+    plt.plot(mse_values, 'b-', label='MSE')
+    plt.scatter(
+        [i for i, e in enumerate(log_data["improvements"]) if e["improved"]],
+        [e["mse"] for e in log_data["improvements"] if e["improved"]],
+        c='b', edgecolor='k', zorder=5
     )
-    ax1.axhline(log_data["initial_mse"], color='r', linestyle='--', linewidth=2, label="Initial MSE")
-    
-    # 配置主坐标轴
-    ax1.set_xlabel("Trial Number", fontsize=12)
-    ax1.set_ylabel("Mean Squared Error (MSE)", color='b', fontsize=12)
-    ax1.tick_params(axis='y', labelcolor='b')
-    ax1.grid(True, linestyle='--', alpha=0.7)
-    
-    # 创建次坐标轴绘制NMSE
-    ax2 = ax1.twinx()
-    nmse_values = [entry["nmse"] for entry in log_data["improvements"]]
-    line_nmse, = ax2.plot(nmse_values, 'g--', alpha=0.7, label="NMSE")
-    ax2.set_ylabel("Normalized MSE (NMSE)", color='g', fontsize=12)
-    ax2.tick_params(axis='y', labelcolor='g')
-    
-    # 合并图例
-    lines = [line_mse, line_nmse]
-    labels = [l.get_label() for l in lines]
-    ax1.legend(lines, labels, loc='upper center', 
-              bbox_to_anchor=(0.5, -0.15), ncol=3, fontsize=10)
-    
-    plt.title(f"Learning Progress with {num_replace} Replacements", fontsize=14, pad=20)
+    plt.axhline(log_data["initial_mse"], color='r', linestyle='--')
+    plt.title("MSE Improvement")
+    plt.grid(True)
+
+    # MAE趋势图
+    plt.subplot(1, 3, 2)
+    mae_values = [entry["mae"] for entry in log_data["improvements"]] 
+    plt.plot(mae_values, 'g-', label='MAE')
+    plt.scatter(
+        [i for i, e in enumerate(log_data["improvements"]) if e["improved"]],
+        [e["mae"] for e in log_data["improvements"] if e["improved"]],
+        c='g', edgecolor='k', zorder=5
+    )
+    plt.axhline(log_data["initial_mae"], color='r', linestyle='--')
+    plt.title("MAE Improvement")
+    plt.grid(True)
+
+    # R²趋势图
+    plt.subplot(1, 3, 3)
+    r2_values = [entry["r2"] for entry in log_data["improvements"]]
+    plt.plot(r2_values, 'r-', label='R²')
+    plt.scatter(
+        [i for i, e in enumerate(log_data["improvements"]) if e["improved"]],
+        [e["r2"] for e in log_data["improvements"] if e["improved"]],
+        c='r', edgecolor='k', zorder=5
+    )
+    plt.axhline(log_data["initial_r2"], color='b', linestyle='--')
+    plt.title("R² Improvement")
+    plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f"graphs/learning_curve_{num_replace}.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"graphs/metrics_comparison_{num_replace}.png", dpi=300)
     plt.close()
+
+def optimize_config(rep, initial_data, optimal_data, trials):
+    print(f"\nProcessing replacement {rep}...")
+    solver = IterativeMTSolver(initial_data, optimal_data)
+    result = solver.full_optimization(rep, trials)
+    return rep, result
 
 def run_comparison(trials=50):
     # Generating initial and optimal data
@@ -56,18 +71,28 @@ def run_comparison(trials=50):
     replacements = [0, 1, 5, 10, 15, 20]
     final_results = {}
     
-    for rep in replacements:
+    '''for rep in replacements:
         print(f"\nCurrent replacement configuration = {rep}...")
         solver = IterativeMTSolver(initial_data, optimal_data)
         result = solver.full_optimization(rep, trials)
         final_results[rep] = result
-        analyze_results(rep, result)
-        
-        print(f"Initial MSE: {result['initial_mse']:.6f}")
-        print(f"Final MSE: {result['final_mse']:.6f}")
-        print(f"Initial NMSE: {result['initial_nmse']:.6f}")
-        print(f"Final NMSE: {result['final_nmse']:.6f}")
-        print(f"Improvement times: {sum(entry['improved'] for entry in result['improvements'])}")
+        analyze_results(rep, result)'''
+    
+    # 并行优化配置
+    final_results = {}
+    with ProcessPoolExecutor(max_workers=8) as executor:
+        futures = {
+            executor.submit(optimize_config, rep, initial_data, optimal_data, trials)
+            for rep in replacements
+        }
+        for future in as_completed(futures):
+            rep, result = future.result()
+            final_results[rep] = result
+            analyze_results(rep, result)
+
+            print(f"Initial MSE: {result['initial_mse']:.6f}")
+            print(f"Final MSE: {result['final_mse']:.6f}")
+            print(f"Improvement times: {sum(entry['improved'] for entry in result['improvements'])}")
     
     # Plot comparison
     plt.figure(figsize=(10, 6))
@@ -82,20 +107,6 @@ def run_comparison(trials=50):
     plt.legend(loc = 'upper right')
     plt.grid(True)
     plt.savefig("graphs/mse_comparison_all.png")
-    plt.close()
-
-    plt.figure(figsize=(10, 6))
-    for rep in replacements:
-        nmse_values = [final_results[rep]['improvements'][0]['nmse']] + \
-                     [entry['nmse'] for entry in final_results[rep]['improvements']]
-        plt.plot(nmse_values, linestyle='--', label=f'Replacement {rep}')
-    
-    plt.xlabel("Trial")
-    plt.ylabel("Normalized MSE")
-    plt.title("NMSE Comparison Across Configurations")
-    plt.legend(loc = 'upper right')
-    plt.grid(True)
-    plt.savefig("graphs/nmse_comparison_all.png")
     plt.close()
 
 if __name__ == "__main__":

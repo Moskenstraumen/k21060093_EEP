@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import gaussian_kde
 
 def forward_kinematics(joint_angles):
     """正运动学计算"""
@@ -16,9 +17,12 @@ def generate_replacement(base_data, num_replace, seed):
     if num_replace <= 0:  
         return np.empty((0, 2))
     
-    joint_limits = np.array([[0, np.pi/2], [-np.pi/2, np.pi/2]])
+    kde = gaussian_kde(base_data.T)
+    return kde.resample(num_replace).T
+    
+    '''joint_limits = np.array([[0, np.pi/2], [-np.pi/2, np.pi/2]])
     return np.random.uniform(
         low=joint_limits[:,0],
         high=joint_limits[:,1],
         size=(num_replace, 2)
-    )
+    )'''
