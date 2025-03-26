@@ -3,7 +3,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
-from sklearn.base import clone
 import joblib
 import numpy as np
 import warnings
@@ -25,7 +24,15 @@ class ANN:
         self.model = MLPRegressor(**self.base_config)  # 统一使用model属性
         self.best_weights = None
     
-    def train(self, X, y, max_epochs=500):
+    def train(self, X, y, max_epochs=1000, verbose=True):
+        # 新增参数类型校验
+        if not isinstance(verbose, bool):
+            raise ValueError("verbose参数必须为布尔类型")
+            
+        # 增加数据标准化
+        self.scaler = StandardScaler()
+        X = self.scaler.fit_transform(X)
+
         # 分割训练集和验证集
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size=0.2, random_state=42
@@ -36,41 +43,43 @@ class ANN:
             warnings.filterwarnings("ignore", category=UserWarning)
             self.model.fit(X_train, y_train)
         
-        '''# 克隆基础配置
-        current_model = clone(self.model)
-        current_model.fit(X_train, y_train)  # 初始化'''
-        
         train_loss = []
         val_loss = []
         best_loss = np.inf
         
+        best_epoch = 0
+        early_stop_flag = False
         for epoch in range(max_epochs):
-            # 增量训练（实际执行1个epoch）
-            self.model.partial_fit(X_train, y_train)
-            
-            # 记录训练损失
-            train_loss.append(self.model.loss_)
-            
-            # 计算验证损失
-            y_pred = self.model.predict(X_val)
-            current_val_loss = mean_squared_error(y_val, y_pred)
-            val_loss.append(current_val_loss)
-            
-            # 更新最佳权重
-            if current_val_loss < best_loss * 0.999:
-                best_loss = current_val_loss
-                self.best_weights = [w.copy() for w in self.model.coefs_]
+            if not early_stop_flag:
+                # 继续正常训练流程
+                self.model.partial_fit(X_train, y_train)
                 
-            # 动态早停检测
-            if (epoch > 20 and 
-                np.mean(val_loss[-10:]) >= np.mean(val_loss[-20:-10])):
-                break
+                # 记录损失和验证指标
+                train_loss.append(self.model.loss_)
+                current_val_loss = mean_squared_error(y_val, self.model.predict(X_val))
+                val_loss.append(current_val_loss)
                 
+                # 更新最佳权重
+                if current_val_loss < best_loss * 0.999:
+                    best_loss = current_val_loss
+                    self.best_weights = [w.copy() for w in self.model.coefs_]
+                    best_epoch = epoch
+                
+                # 检测早停条件但不中断循环
+                # 改为动态容忍度
+                patience = max(20, int(0.1 * max_epochs))  # 至少20个epoch，最多10%总epoch数
+                if (epoch - best_epoch) > patience:
+                # if (epoch - best_epoch) > 2 * self.base_config['n_iter_no_change']:
+                    early_stop_flag = True
+                    if verbose:  # 添加条件判断
+                        print(f"\nEarly stopping triggered at epoch {epoch}, continuing for visualization...")
+            else:
+                # 早停后保持记录最后的最佳值
+                train_loss.append(train_loss[-1])
+                val_loss.append(val_loss[-1])
         # 恢复最佳权重
         self.model.coefs_ = self.best_weights
         return train_loss, val_loss
-
-
     
     def evaluate(self, X_test, y_test):
         y_pred = self.model.predict(X_test)

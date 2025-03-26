@@ -11,7 +11,7 @@ class IterativeMTSolver:
         
         # Initilize baseline model
         self.baseline_model = ANN()
-        self.baseline_model.train(self.initial_X, self.initial_y)
+        self.baseline_model.train(self.initial_X, self.initial_y, verbose=False)
         self.baseline_mse, self.baseline_nmse = self.baseline_model.evaluate(self.optimal_X, self.optimal_y)
         
         # Current best model
@@ -24,7 +24,7 @@ class IterativeMTSolver:
         
         # Train optimal model using optimal dataset
         self.optimal_model = ANN()
-        self.optimal_model.train(self.optimal_X, self.optimal_y)
+        self.optimal_model.train(self.optimal_X, self.optimal_y, verbose=False)
     
     def run_iteration(self, num_replace, trial_id):
         # Skip if no replacement is needed
@@ -43,7 +43,7 @@ class IterativeMTSolver:
         
         # Evaluate a freshly trained ANN model using the modified dataset (temp_X, temp_y)
         model = ANN()
-        model.train(temp_X, temp_y)
+        model.train(temp_X, temp_y, verbose=False)
         current_mse, current_nmse = model.evaluate(self.optimal_X, self.optimal_y)
         
         # Compare and update better results
