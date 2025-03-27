@@ -10,103 +10,122 @@ import warnings
 class ANN:
     def __init__(self):
         self.base_config = {
-            'hidden_layer_sizes': (32, 16),
+            'hidden_layer_sizes': (15, 8),
             'activation': 'tanh',
             'solver': 'adam',
-            'alpha': 0.01,
-            'batch_size': 16,
-            'learning_rate_init': 0.001,
-            'max_iter': 100, 
-            'warm_start': True,  # 允许增量训练
-            'n_iter_no_change': 10,
-            'validation_fraction': 0.2,
-            'random_state': 42
+            'alpha': 0.001,  # Reduced regularization
+            'batch_size': 16,  # More stable batch size
+            'learning_rate': 'adaptive',
+            'learning_rate_init': 0.01,  # Lower initial rate
+            'max_iter': 1,
+            'random_state': 42,
+            'tol': 1e-8
         }
-        self.model = MLPRegressor(**self.base_config)  # 统一使用model属性
-        self.best_weights = None
-    
-    def train(self, X, y, max_epochs=1000, verbose=True):
-        # 新增参数类型校验
-        if not isinstance(verbose, bool):
-            raise ValueError("verbose参数必须为布尔类型")
-            
-        # 增加数据标准化
+        self.max_epochs = 1000  # More epochs
+        self.patience = 100     # More patience
+        self.min_improvement = 1e-7  # Stricter improvement threshold
+        self.validation_fraction = 0.2
+        self.model = MLPRegressor(**self.base_config)
         self.scaler = StandardScaler()
-        X = self.scaler.fit_transform(X)
-
-        # 分割训练集和验证集
+        self.X_val = None
+        self.y_val = None
+        
+    def train(self, X, y, verbose=True):
+        # Split and scale data
         X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=0.2, random_state=42
+            X, y, test_size=self.validation_fraction, random_state=42
         )
-
-        # 在数据分割后添加：
-        self.X_val = X_val  # 记录验证集特征
-        self.y_val = y_val  # 记录验证集标签
-
-        # 初始化模型（避免首次fit警告）
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)
-            self.model.fit(X_train, y_train)
         
-        train_loss = []
-        val_loss = []
-        best_loss = np.inf
+        # Store validation data
+        self.X_val = X_val
+        self.y_val = y_val
         
-        best_epoch = 0
-        early_stop_flag = False
-        for epoch in range(max_epochs):
-            # 添加提前终止
-            if early_stop_flag:  
-                break
-
-            if not early_stop_flag:
-                # 继续正常训练流程
-                self.model.partial_fit(X_train, y_train)
+        # Scale data
+        X_train_scaled = self.scaler.fit_transform(X_train)
+        X_val_scaled = self.scaler.transform(X_val)
+        
+        # Training loop with improved convergence checking
+        best_val_loss = float('inf')
+        best_model_loss = float('inf')
+        patience_counter = 0
+        train_losses = []
+        val_losses = []
+        
+        try:
+            for epoch in range(self.max_epochs):
+                # Warmup learning rate for first 200 epochs
+                if epoch < 200:
+                    self.model.learning_rate_init = 0.005 * (1 + epoch/200)
                 
-                # 记录损失和验证指标
-                train_loss.append(self.model.loss_)
-                current_val_loss = mean_squared_error(y_val, self.model.predict(X_val))
-                val_loss.append(current_val_loss)
+                # Train one epoch
+                self.model.partial_fit(X_train_scaled, y_train)
                 
-                # 更新最佳权重
-                if current_val_loss < best_loss * 0.999:
-                    best_loss = current_val_loss
-                    self.best_weights = [w.copy() for w in self.model.coefs_]
-                    best_epoch = epoch
+                # Compute losses
+                train_pred = self.model.predict(X_train_scaled)
+                val_pred = self.model.predict(X_val_scaled)
                 
-                # 检测早停条件但不中断循环
-                # 改为动态容忍度
-                patience = int(1.5 * self.base_config['n_iter_no_change'])  # 22-23 epochs
-                if (epoch - best_epoch) > patience:
-                # if (epoch - best_epoch) > 2 * self.base_config['n_iter_no_change']:
-                    early_stop_flag = True
-                    if verbose:  # 添加条件判断
-                        print(f"\nEarly stopping at epoch {epoch} (best={best_epoch})...")
-            else:
-                # 早停后保持记录最后的最佳值
-                train_loss.append(train_loss[-1])
-                val_loss.append(val_loss[-1])
-        # 恢复最佳权重
-        self.model.coefs_ = self.best_weights
+                train_loss = np.mean((train_pred - y_train) ** 2)
+                val_loss = np.mean((val_pred - y_val) ** 2)
+                
+                train_losses.append(train_loss)
+                val_losses.append(val_loss)
+                
+                # Compute moving average of losses
+                if len(train_losses) >= 10:
+                    avg_train_loss = np.mean(train_losses[-10:])
+                    avg_val_loss = np.mean(val_losses[-10:])
+                else:
+                    avg_train_loss = train_loss
+                    avg_val_loss = val_loss
+                
+                # Improved convergence checking
+                improvement = (best_val_loss - val_loss) / best_val_loss if best_val_loss != float('inf') else 1
+                
+                if avg_val_loss < best_val_loss - self.min_improvement:
+                    best_val_loss = avg_val_loss
+                    best_model_loss = train_loss
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                
+                # Early stopping conditions
+                if patience_counter >= self.patience:
+                    if verbose:
+                        print(f"Early stopping at epoch {epoch}")
+                        print(f"Best validation loss: {best_val_loss:.6f}")
+                        print(f"Final training loss: {train_loss:.6f}")
+                    break
+                
+                # Check for convergence
+                if len(train_losses) > 50:
+                    recent_loss_std = np.std(train_losses[-20:])
+                    if recent_loss_std < self.min_improvement and train_loss < 1e-4:
+                        if verbose:
+                            print(f"Converged at epoch {epoch}")
+                        break
+                
+                if verbose and epoch % 100 == 0:
+                    print(f"Epoch {epoch}: train_loss={train_loss:.6f}, val_loss={val_loss:.6f}")
+            
+            return np.array(train_losses), np.array(val_losses)
+            
+        except Exception as e:
+            print(f"Training failed: {str(e)}")
+            return np.array([]), np.array([])
 
-        # 截断损失记录
-        train_loss = train_loss[:epoch+1]
-        val_loss = val_loss[:epoch+1]
-
-        return train_loss, val_loss
-    
     def evaluate(self, X_test, y_test):
-        y_pred = self.model.predict(X_test)
-
-        # 维度处理
-        y_test = np.asarray(y_test).reshape(-1, 2)
-        y_pred = np.asarray(y_pred).reshape(-1, 2)
+        X_scaled = self.scaler.transform(X_test)
+        y_pred = self.model.predict(X_scaled)
+        
+        mse = np.mean((y_pred - y_test) ** 2)
+        mae = np.mean(np.abs(y_pred - y_test))
+        r2 = 1 - np.sum((y_test - y_pred) ** 2) / np.sum((y_test - np.mean(y_test)) ** 2)
         
         return {
-            'mse': mean_squared_error(y_test, y_pred),
-            'mae': mean_absolute_error(y_test, y_pred),
-            'r2': r2_score(y_test, y_pred)
-        } 
+            'mse': mse,
+            'mae': mae,
+            'r2': r2
+        }
     
     def save(self, path):
         joblib.dump(self.model, path)

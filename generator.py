@@ -9,7 +9,7 @@ def generate_initial_data():
     X = np.random.uniform(
         low=[[0, -np.pi/2]],
         high=[[np.pi/2, np.pi/2]],
-        size=(100, 2)
+        size=(200, 2)
     )
     y = forward_kinematics(X)
     

@@ -90,9 +90,9 @@ def run_comparison(trials=50):
             final_results[rep] = result
             analyze_results(rep, result)
 
-            print(f"Initial MSE: {result['initial_mse']:.6f}")
-            print(f"Final MSE: {result['final_mse']:.6f}")
-            print(f"Improvement times: {sum(entry['improved'] for entry in result['improvements'])}")
+            # print(f"Initial MSE: {result['initial_mse']:.6f}")
+            # print(f"Final MSE: {result['final_mse']:.6f}")
+            # print(f"Improvement times: {sum(entry['improved'] for entry in result['improvements'])}")
     
     # Plot comparison
     plt.figure(figsize=(10, 6))

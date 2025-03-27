@@ -2,7 +2,7 @@
 import numpy as np
 from generator import forward_kinematics
 
-def generate_optimal_data(n_samples=100):
+def generate_optimal_data(n_samples=200):
     X = np.random.uniform(0, np.pi/2, (n_samples, 2))  # 输入：两个关节角度
     y = forward_kinematics(X)  # 输出：二维坐标
     
