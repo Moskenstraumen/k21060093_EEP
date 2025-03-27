@@ -57,8 +57,8 @@ def analyze_all_configs(dataset_num=1):
     configs = [0, 1, 5, 10, 15, 20]
     reports = {}
     
-    print(f"\nAnalyzing Dataset {dataset_num}")
     print("="*50)
+    print(f"\nAnalyzing Dataset {dataset_num}")
     
     for rep in configs:
         X, y = load_best_dataset(rep, dataset_num)
