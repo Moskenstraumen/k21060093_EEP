@@ -32,10 +32,27 @@ def analyze_dataset_method(dataset_num, X_opt, y_opt):
     if results is None:
         return None
         
-    # Evaluate each replacement configuration
     metrics = {}
+    min_mse = float('inf')
     for rep, (X, y) in results.items():
-        metrics[rep] = evaluate_against_optimal(X, y, X_opt, y_opt)
+        # Evaluate current configuration
+        current_metrics = evaluate_against_optimal(X, y, X_opt, y_opt)
+        metrics[rep] = current_metrics
+        
+        # Track minimum MSE
+        min_mse = min(min_mse, current_metrics['mse'])
+        
+        # Debug output
+        print(f"Dataset {dataset_num}, Rep {rep}:")
+        print(f"  MSE: {current_metrics['mse']:.6f}")
+        if rep == 0:
+            initial_mse = current_metrics['mse']
+            print(f"  Initial MSE: {initial_mse:.6f}")
+    
+    # Calculate improvement
+    if 'initial_mse' in locals():
+        improvement = ((initial_mse - min_mse) / initial_mse) * 100
+        print(f"  Improvement: {improvement:.2f}%")
     
     return metrics
 

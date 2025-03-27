@@ -63,6 +63,20 @@ class IterativeMTSolver:
 
     def full_optimization(self, num_replace, trials=50):
         """完整优化流程"""
+        # Ensure baseline uses exact same conditions
+        self.baseline_model = ANN()
+        self.baseline_model.train(self.initial_X, self.initial_y, verbose=False)
+        baseline_metrics = self.baseline_model.evaluate(self.optimal_X, self.optimal_y)
+        
+        # Use same model for 0 replacement case
+        if num_replace == 0:
+            return {
+                "initial_mse": baseline_metrics['mse'],
+                "initial_mae": baseline_metrics['mae'],
+                "initial_r2": baseline_metrics['r2'],
+                "improvements": []  # Empty list for no improvements
+            }
+        
         progress = tqdm(total=trials, desc=f"Replacement {num_replace}")
         improvement_log = []
         

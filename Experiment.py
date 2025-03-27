@@ -1,13 +1,3 @@
-"""
-自动化实验流程控制器
-
-功能特性：
-1. 顺序执行数据优化与结果分析
-2. 智能错误处理机制
-3. 实验耗时统计
-4. 跨平台兼容性支持
-"""
-
 import subprocess
 import sys
 import os
@@ -15,7 +5,7 @@ import time
 from pathlib import Path
 
 def run_script(script_name, dataset_num=None):
-    print(f"\n{'='*25} 启动 {script_name} (Dataset {dataset_num}) {'='*25}")
+    print(f"\n{'='*20} Running {script_name} (Dataset {dataset_num}) {'='*20}")
     
     start_time = time.time()
     try:
@@ -31,14 +21,13 @@ def run_script(script_name, dataset_num=None):
         )
         return True
     except subprocess.CalledProcessError as e:
-        print(f"\n❌ {script_name} 执行失败 (返回码: {e.returncode})")
+        print(f"\n{script_name} failed (Return code: {e.returncode})")
         return False
     finally:
         elapsed = time.time() - start_time
-        print(f"\n{'='*25} {script_name} 完成 [耗时: {elapsed:.1f}s] {'='*25}")
+        print(f"\n{'='*20} {script_name} completed [Time taken: {elapsed:.1f}s] {'='*20}")
 
 def validate_files(dataset_num):
-    """结果文件完整性校验"""
     # Check data files
     data_files = [
         f"saved_data/initial_X_method{dataset_num}.npy",
@@ -66,16 +55,16 @@ def validate_files(dataset_num):
     missing = [f for f in all_files if not Path(f).exists()]
     
     if missing:
-        print(f"\n⚠️ Dataset {dataset_num} missing required files:")
+        print(f"\nDataset {dataset_num} missing required files:")
         for f in missing:
             print(f" - {f}")
         return False
     
-    print(f"\n✅ Dataset {dataset_num} validation successful")
+    print(f"\nDataset {dataset_num} validation successful")
     return True
 
 def run_experiment():
-    """运行完整实验流程"""
+    '''Run the full experiment pipeline'''
     # Create all necessary directories
     for i in range(1, 4):
         os.makedirs(f"results/dataset{i}", exist_ok=True)
@@ -84,7 +73,7 @@ def run_experiment():
     
     # Generate all datasets first
     if not run_script("generator.py"):
-        print("❌ Dataset generation failed")
+        print("Dataset generation failed")
         return
     
     # Run experiments for each dataset
@@ -96,13 +85,13 @@ def run_experiment():
         
         # Run optimization
         if not run_script("compare_replacement.py", dataset_num):
-            print(f"❌ Optimization failed for dataset {dataset_num}")
+            print(f"Optimization failed for dataset {dataset_num}")
             success = False
             continue
             
         # Run analysis
         if not run_script("analyse_replacement_trial.py", dataset_num):
-            print(f"❌ Analysis failed for dataset {dataset_num}")
+            print(f"Analysis failed for dataset {dataset_num}")
             success = False
             continue
         
@@ -112,9 +101,9 @@ def run_experiment():
             continue
     
     if success:
-        print("\n✅ All experiments completed successfully!")
+        print("\nAll experiments completed successfully!")
     else:
-        print("\n⚠️ Some experiments failed. Check logs for details.")
+        print("\nSome experiments failed. Check logs for details.")
         sys.exit(1)
 
 if __name__ == "__main__":
