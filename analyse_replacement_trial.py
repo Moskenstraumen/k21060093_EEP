@@ -4,17 +4,17 @@ import os
 from Ann import ANN
 from sklearn.metrics import mean_absolute_error, r2_score
 
-def load_best_dataset(replacement_num):
+def load_best_dataset(replacement_num, dataset_num):
     """加载指定替换配置的最佳数据集"""
     try:
-        X = np.load(f"results/best_{replacement_num}_X.npy")
-        y = np.load(f"results/best_{replacement_num}_y.npy")
+        X = np.load(f"results/dataset{dataset_num}/best_{replacement_num}_X.npy")
+        y = np.load(f"results/dataset{dataset_num}/best_{replacement_num}_y.npy")
         return X, y
     except FileNotFoundError:
-        print(f"数据集未找到: replacement {replacement_num}")
+        print(f"数据集未找到: dataset {dataset_num}, replacement {replacement_num}")
         return None, None
 
-def plot_learning_curve(replacement_num, train_loss, val_loss):
+def plot_learning_curve(replacement_num, train_loss, val_loss, dataset_num):
     plt.figure(figsize=(12, 8))
     
     # 绘制双轴曲线
@@ -47,18 +47,21 @@ def plot_learning_curve(replacement_num, train_loss, val_loss):
     plt.grid(True, which='both', ls='--', alpha=0.5)
     
     # 保存高分辨率图片
-    os.makedirs("graphs", exist_ok=True)
-    plt.savefig(f"graphs/learning_curve_per_trial_{replacement_num}.png", 
+    save_dir = f"graphs/dataset{dataset_num}"
+    os.makedirs(save_dir, exist_ok=True)
+    plt.savefig(f"{save_dir}/learning_curve_per_trial_{replacement_num}.png", 
                dpi=300, bbox_inches='tight')
     plt.close()
 
-# analyse_replacement_trial.py 修改部分
-def analyze_all_configs():
+def analyze_all_configs(dataset_num=1):
     configs = [0, 1, 5, 10, 15, 20]
     reports = {}
     
+    print(f"\nAnalyzing Dataset {dataset_num}")
+    print("="*50)
+    
     for rep in configs:
-        X, y = load_best_dataset(rep)
+        X, y = load_best_dataset(rep, dataset_num)
         if X is None:
             continue
             
@@ -81,7 +84,7 @@ def analyze_all_configs():
             val_r2 = r2_score(model.y_val, val_pred)
             
             # 生成可视化
-            plot_learning_curve(rep, train_loss, val_loss)
+            plot_learning_curve(rep, train_loss, val_loss, dataset_num)
             
             # 生成诊断报告（传递新增参数）
             reports[rep] = analyze_training_process(
@@ -96,7 +99,7 @@ def analyze_all_configs():
             print(f"分析失败: {str(e)}")
     
     # 更新对比报告（新增训练指标）
-    print("\n全局对比报告:")
+    print(f"\n全局对比报告 (Dataset {dataset_num}):")
     compare = sorted(reports.items(), key=lambda x: x[1]['best_val'])
     for rep, data in compare:
         print(f"配置{rep:2d} replacements | "
@@ -140,4 +143,6 @@ def analyze_training_process(train_loss, val_loss,
     return analysis
 
 if __name__ == "__main__":
-    analyze_all_configs()
+    # Get dataset number from environment or default to 1
+    dataset_num = int(os.environ.get('INITIAL_DATASET', 1))
+    analyze_all_configs(dataset_num)

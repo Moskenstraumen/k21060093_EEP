@@ -16,7 +16,7 @@ class ANN:
             'alpha': 0.001,  # Reduced regularization
             'batch_size': 16,  # More stable batch size
             'learning_rate': 'adaptive',
-            'learning_rate_init': 0.01,  # Lower initial rate
+            'learning_rate_init': 0.01, 
             'max_iter': 1,
             'random_state': 42,
             'tol': 1e-8

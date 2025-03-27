@@ -5,9 +5,10 @@ from Ann import ANN
 from utils import generate_replacement, forward_kinematics
 
 class IterativeMTSolver:
-    def __init__(self, initial_data, optimal_data):
+    def __init__(self, initial_data, optimal_data, dataset_num=1):
         self.initial_X, self.initial_y = initial_data
         self.optimal_X, self.optimal_y = optimal_data
+        self.dataset_num = dataset_num
         
         # 初始化基准模型
         self.baseline_model = ANN()
@@ -82,9 +83,10 @@ class IterativeMTSolver:
             })
 
         # 保存最佳数据集
-        os.makedirs("results", exist_ok=True)
-        np.save(f"results/best_{num_replace}_X.npy", self.best_X)
-        np.save(f"results/best_{num_replace}_y.npy", self.best_y)
+        results_dir = f"results/dataset{self.dataset_num}"
+        os.makedirs(results_dir, exist_ok=True)
+        np.save(f"{results_dir}/best_{num_replace}_X.npy", self.best_X)
+        np.save(f"{results_dir}/best_{num_replace}_y.npy", self.best_y)
         
         return {
             "initial_mse": self.baseline_mse,
