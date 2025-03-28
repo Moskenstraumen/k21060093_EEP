@@ -10,18 +10,18 @@ import warnings
 class ANN:
     def __init__(self):
         self.base_config = {
-            'hidden_layer_sizes': (10, 5),
+            'hidden_layer_sizes': (32, 16),
             'activation': 'tanh',
             'solver': 'adam',
-            'alpha': 0.01,
+            'alpha': 0.009,
             'batch_size': 32,
-            'learning_rate': 'constant',
-            'learning_rate_init': 0.005,
+            'learning_rate': 'adaptive',
+            'learning_rate_init': 0.0005,
             'max_iter': 1,
             'random_state': 42
         }
         self.max_epochs = 2000
-        self.patience = 25
+        self.patience = 100
         self.validation_fraction = 0.2
         self.model = MLPRegressor(**self.base_config)
         self.scaler = StandardScaler()

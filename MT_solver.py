@@ -10,17 +10,24 @@ class IterativeMTSolver:
         self.optimal_X, self.optimal_y = optimal_data
         self.dataset_num = dataset_num
         
-        # 初始化基准模型
+        # Ensure consistent y shape
+        if len(self.initial_y.shape) == 1:
+            self.initial_y = self.initial_y.reshape(-1, 1)
+        if len(self.optimal_y.shape) == 1:
+            self.optimal_y = self.optimal_y.reshape(-1, 1)
+        
+        # Initialize baseline model
         self.baseline_model = ANN()
+        # Let ANN handle the train/validation split and normalization internally
         self.baseline_model.train(self.initial_X, self.initial_y, verbose=False)
         
-        # 记录基准指标
+        # Get baseline metrics
         baseline_metrics = self.baseline_model.evaluate(self.optimal_X, self.optimal_y)
         self.baseline_mse = baseline_metrics['mse']
         self.baseline_mae = baseline_metrics['mae']
         self.baseline_r2 = baseline_metrics['r2']
         
-        # 当前最佳状态
+        # Initialize current best state
         self.current_X = self.initial_X.copy()
         self.current_y = self.initial_y.copy()
         self.best_mse = self.baseline_mse
@@ -30,33 +37,37 @@ class IterativeMTSolver:
         self.best_y = self.current_y.copy()
 
     def run_iteration(self, num_replace, trial_id):
-        """执行单次迭代优化"""
         if num_replace == 0:
             return False, self.best_mse, self.best_mae, self.best_r2
         
-        # 生成替换样本
+        # Generate replacement samples
         np.random.seed(trial_id)
         replace_idx = np.random.choice(len(self.current_X), num_replace, False)
         new_samples = generate_replacement(self.current_X, num_replace, trial_id)
         
-        # 创建临时数据集
+        # Create temporary dataset
         temp_X = self.current_X.copy()
         temp_X[replace_idx] = new_samples
         temp_y = forward_kinematics(temp_X)
         
-        # 训练并评估新模型
+        if len(temp_y.shape) == 1:
+            temp_y = temp_y.reshape(-1, 1)
+        
+        # Train new model - let ANN handle normalization
         model = ANN()
         model.train(temp_X, temp_y, verbose=False)
+        
+        # Evaluate
         metrics = model.evaluate(self.optimal_X, self.optimal_y)
         
-        # 更新最佳结果
+        # Update best results if improved
         if metrics['mse'] < self.best_mse:
             self.best_mse = metrics['mse']
             self.best_mae = metrics['mae']
             self.best_r2 = metrics['r2']
             self.best_X = temp_X.copy()
             self.best_y = temp_y.copy()
-            self.current_X = temp_X  # 接受改进
+            self.current_X = temp_X  # Accept improvement
             return True, metrics['mse'], metrics['mae'], metrics['r2']
         
         return False, self.best_mse, self.best_mae, self.best_r2
