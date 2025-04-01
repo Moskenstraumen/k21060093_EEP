@@ -10,22 +10,26 @@ import warnings
 class ANN:
     def __init__(self):
         self.base_config = {
-            'hidden_layer_sizes': (32, 16),
-            'activation': 'tanh',
+            'hidden_layer_sizes': (16, 8), 
+            'activation': 'tanh',  
             'solver': 'adam',
-            'alpha': 0.009,
-            'batch_size': 32,
-            'learning_rate': 'adaptive',
-            'learning_rate_init': 0.0005,
+            'alpha': 0.05, 
+            'batch_size': 32, 
+            'learning_rate': 'adaptive', 
+            'learning_rate_init': 0.001, 
             'max_iter': 1,
-            'random_state': 42
+            'random_state': 42,
+            'beta_1': 0.9, 
+            'beta_2': 0.999,
+            'epsilon': 1e-8,
+            'tol': 1e-8
         }
-        self.max_epochs = 1000
-        self.patience = 100
+        self.max_epochs = 2000 
+        self.patience = 30 
         self.validation_fraction = 0.2
+        self.min_delta = 1e-4
         self.model = MLPRegressor(**self.base_config)
         self.scaler = StandardScaler()
-        # Initialize validation data storage
         self.X_val = None
         self.y_val = None
         
@@ -42,18 +46,23 @@ class ANN:
         self.X_val = X_val
         self.y_val = y_val
         
-        # Scale data
-        X_train_scaled = self.scaler.fit_transform(X_train)
-        X_val_scaled = self.scaler.transform(X_val)
+        # Scale data with clipping for robustness
+        X_train_scaled = np.clip(self.scaler.fit_transform(X_train), -3, 3)
+        X_val_scaled = np.clip(self.scaler.transform(X_val), -3, 3)
         
-        # Training loop with manual early stopping
+        # Training variables
         best_val_loss = float('inf')
+        best_model = None
         patience_counter = 0
         train_losses = []
         val_losses = []
         
         try:
             for epoch in range(self.max_epochs):
+                # More aggressive learning rate decay
+                if epoch > 0 and epoch % 300 == 0:
+                    self.model.learning_rate_init *= 0.5
+                
                 # Train one epoch
                 self.model.partial_fit(X_train_scaled, y_train)
                 
@@ -64,23 +73,34 @@ class ANN:
                 train_loss = np.mean((train_pred - y_train) ** 2)
                 val_loss = np.mean((val_pred - y_val) ** 2)
                 
+                # Smoothing for stability
+                if train_losses:
+                    train_loss = 0.95 * train_losses[-1] + 0.05 * train_loss
+                    val_loss = 0.95 * val_losses[-1] + 0.05 * val_loss
+                
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
                 
                 # Early stopping check
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-                    patience_counter = 0
-                else:
-                    patience_counter += 1
-                
-                if patience_counter >= self.patience:
+                # Multiple stopping conditions
+                if any([
+                    patience_counter >= self.patience,
+                    train_loss < 1e-6,
+                    epoch > 100 and val_loss > 2 * train_loss, 
+                    epoch > 200 and abs(train_loss - val_loss) < self.min_delta  # Convergence check
+                ]):
                     if verbose:
                         print(f"Early stopping at epoch {epoch}")
                     break
                 
                 if verbose and epoch % 100 == 0:
-                    print(f"Epoch {epoch}: train_loss={train_loss:.6f}, val_loss={val_loss:.6f}")
+                    print(f"Epoch {epoch}: "
+                          f"train={train_loss:.6f}, val={val_loss:.6f}, "
+                          f"lr={self.model.learning_rate_init:.6f}")
+            
+            # Restore best model
+            if best_model is not None:
+                self.model.coefs_ = best_model
             
             return np.array(train_losses), np.array(val_losses)
             

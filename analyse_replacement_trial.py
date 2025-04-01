@@ -15,37 +15,59 @@ def load_best_dataset(replacement_num, dataset_num):
         return None, None
 
 def plot_learning_curve(replacement_num, train_loss, val_loss, dataset_num):
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(10, 6))
     
+    # Use LaTeX font and style
+    plt.style.use('seaborn-v0_8-paper')
+    plt.rcParams.update({
+        'font.family': 'serif',
+        'font.size': 12,
+        'axes.labelsize': 14,
+        'axes.titlesize': 16
+    })
+    
+    # Plot with consistent max epochs
+    max_epochs = 2000  # Match ANN.max_epochs
     epochs = np.arange(len(train_loss)) + 1
-    plt.semilogy(epochs, train_loss, 'b-', lw=1.5, label='Training MSE')
-    plt.semilogy(epochs, val_loss, 'r--', lw=2, label='Validation MSE')
     
-    best_train = np.argmin(train_loss)
-    best_val = np.argmin(val_loss)
-    plt.scatter(best_train+1, train_loss[best_train], 
-                c='blue', s=100, edgecolor='k', zorder=5,
-                label=f'Best Train: {train_loss[best_train]:.2e}')
-    plt.scatter(best_val+1, val_loss[best_val],
-                c='red', s=100, edgecolor='k', zorder=5,
-                label=f'Best Val: {val_loss[best_val]:.2e}')
+    # Plot lines without markers
+    plt.semilogy(epochs, train_loss, '-', color='#1f77b4', lw=2, label='Training Loss')
+    plt.semilogy(epochs, val_loss, '--', color='#ff7f0e', lw=2, label='Validation Loss')
     
+    # Set axis limits
+    plt.xlim(0, max_epochs)
     max_loss = max(train_loss[0], val_loss[0]) * 1.2
     min_loss = min(np.min(train_loss), np.min(val_loss)) * 0.8
     plt.ylim(min_loss, max_loss)
     
-    plt.title(f'Learning Curve for ({replacement_num} Replacements)\n'
-             f'Early Stop at Epoch {len(train_loss)}', fontsize=14, pad=15)
-    plt.xlabel('Training Epochs', fontsize=12)
-    plt.ylabel('Mean Squared Error', fontsize=12)
-    plt.legend(frameon=True, facecolor='ghostwhite', 
-              loc='upper right', fontsize=10)
-    plt.grid(True, which='both', ls='--', alpha=0.5)
+    # Add labels and title
+    plt.title(f'Learning Curves ({replacement_num} Replacements)', pad=15)
+    plt.xlabel('Epochs')
+    plt.ylabel('Mean Squared Error')
     
+    # Style the legend
+    plt.legend(frameon=True, 
+              fancybox=True,
+              edgecolor='black',
+              facecolor='white',
+              framealpha=1.0,
+              loc='upper right')
+    
+    # Customize grid
+    plt.grid(True, which='major', linestyle='--', alpha=0.7)
+    plt.grid(True, which='minor', linestyle=':', alpha=0.4)
+    
+    # Remove top and right spines
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    
+    # Save with high quality
     save_dir = f"graphs/dataset{dataset_num}"
     os.makedirs(save_dir, exist_ok=True)
-    plt.savefig(f"{save_dir}/learning_curve_per_trial_{replacement_num}.png", 
-               dpi=300, bbox_inches='tight')
+    plt.savefig(f"{save_dir}/learning_curve_per_trial_{replacement_num}.png",
+                dpi=300, 
+                bbox_inches='tight',
+                pad_inches=0.1)
     plt.close()
 
 def analyze_all_configs(dataset_num=1):

@@ -112,7 +112,7 @@ def run_comparison(trials=50, dataset_num=1):
     print(f"Baseline MSE: {baseline_mse:.6f}")
 
     # Run in parallel with shared baseline
-    with ProcessPoolExecutor(max_workers=12) as executor:
+    with ProcessPoolExecutor(max_workers=14) as executor:
         futures = {
             executor.submit(
                 optimize_config, 
@@ -133,8 +133,8 @@ def run_comparison(trials=50, dataset_num=1):
     # Plot with fixed marker handling
     plt.figure(figsize=(10, 6))
     
-    # Sort replacements for ordered legend
-    ordered_reps = sorted(final_results.keys())
+    # Sort replacements for ordered legend, exclude 0 as it's shown as baseline
+    ordered_reps = sorted([rep for rep in final_results.keys() if rep > 0])
     
     # First plot baseline as a horizontal line
     plt.axhline(y=baseline_mse, 
@@ -144,28 +144,28 @@ def run_comparison(trials=50, dataset_num=1):
                 linewidth=1.5,
                 alpha=0.8)
     
-    # Then plot all replacements
+    # Then plot non-zero replacements
     for rep in ordered_reps:
         # Get MSE values
         mse_values = [baseline_mse] + \
                     [entry['mse'] for entry in final_results[rep]['improvements']]
         
         # Plot line
-        plt.plot(range(len(mse_values)), mse_values, 
+        plt.plot(range(len(mse_values)), 
+                mse_values, 
                 label=f'Replacement {rep}',
                 linestyle='-',
                 linewidth=1.5)
         
-        # Add markers for improvements (skip baseline case)
-        if rep > 0:
-            for i in range(1, len(mse_values)):
-                if mse_values[i] < mse_values[i-1]:  # Improvement detected
-                    plt.scatter(i, mse_values[i],
-                              marker='o',
-                              s=30,  # Smaller marker size
-                              c='blue',
-                              edgecolor='black',
-                              zorder=5)
+        # Add markers for improvements
+        for i in range(1, len(mse_values)):
+            if mse_values[i] < mse_values[i-1]:  # Improvement detected
+                plt.scatter(i, mse_values[i],
+                          marker='o',
+                          s=30,  # Smaller marker size
+                          c='blue',
+                          edgecolor='black',
+                          zorder=5)
 
     plt.xlabel("Trial")
     plt.ylabel("MSE")
