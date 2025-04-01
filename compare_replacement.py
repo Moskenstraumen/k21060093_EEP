@@ -132,14 +132,23 @@ def run_comparison(trials=50, dataset_num=1):
 
     # Plot with fixed marker handling
     plt.figure(figsize=(10, 6))
-    for rep in final_results:
+    
+    # Sort replacements for ordered legend
+    ordered_reps = sorted(final_results.keys())
+    
+    # First plot baseline as a horizontal line
+    plt.axhline(y=baseline_mse, 
+                color='red',
+                linestyle='--',
+                label='Baseline MSE',
+                linewidth=1.5,
+                alpha=0.8)
+    
+    # Then plot all replacements
+    for rep in ordered_reps:
         # Get MSE values
         mse_values = [baseline_mse] + \
                     [entry['mse'] for entry in final_results[rep]['improvements']]
-        
-        # For rep=0, use constant baseline MSE
-        if rep == 0:
-            mse_values = [baseline_mse] * len(mse_values)
         
         # Plot line
         plt.plot(range(len(mse_values)), mse_values, 
@@ -162,7 +171,7 @@ def run_comparison(trials=50, dataset_num=1):
     plt.ylabel("MSE")
     plt.title(f"MSE Comparison Across Configurations (Dataset {dataset_num})")
     plt.legend(loc='upper right')
-    plt.grid(True, alpha=0.3)
+    plt.grid(True)
     plt.tight_layout()
     plt.savefig(f"graphs/dataset{dataset_num}/mse_comparison_all.png", 
                 dpi=300, bbox_inches='tight')

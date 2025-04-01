@@ -5,24 +5,22 @@ from Ann import ANN
 from sklearn.metrics import mean_absolute_error, r2_score
 
 def load_best_dataset(replacement_num, dataset_num):
-    """加载指定替换配置的最佳数据集"""
+    # Load the best dataset for the given replacement configuration
     try:
         X = np.load(f"results/dataset{dataset_num}/best_{replacement_num}_X.npy")
         y = np.load(f"results/dataset{dataset_num}/best_{replacement_num}_y.npy")
         return X, y
     except FileNotFoundError:
-        print(f"数据集未找到: dataset {dataset_num}, replacement {replacement_num}")
+        print(f"Dataset not found: dataset {dataset_num}, replacement {replacement_num}")
         return None, None
 
 def plot_learning_curve(replacement_num, train_loss, val_loss, dataset_num):
     plt.figure(figsize=(12, 8))
     
-    # 绘制双轴曲线
     epochs = np.arange(len(train_loss)) + 1
     plt.semilogy(epochs, train_loss, 'b-', lw=1.5, label='Training MSE')
     plt.semilogy(epochs, val_loss, 'r--', lw=2, label='Validation MSE')
     
-    # 标注关键点
     best_train = np.argmin(train_loss)
     best_val = np.argmin(val_loss)
     plt.scatter(best_train+1, train_loss[best_train], 
@@ -32,12 +30,10 @@ def plot_learning_curve(replacement_num, train_loss, val_loss, dataset_num):
                 c='red', s=100, edgecolor='k', zorder=5,
                 label=f'Best Val: {val_loss[best_val]:.2e}')
     
-    # 动态调整坐标范围
     max_loss = max(train_loss[0], val_loss[0]) * 1.2
     min_loss = min(np.min(train_loss), np.min(val_loss)) * 0.8
     plt.ylim(min_loss, max_loss)
     
-    # 专业图表样式
     plt.title(f'Learning Curve for ({replacement_num} Replacements)\n'
              f'Early Stop at Epoch {len(train_loss)}', fontsize=14, pad=15)
     plt.xlabel('Training Epochs', fontsize=12)
@@ -46,7 +42,6 @@ def plot_learning_curve(replacement_num, train_loss, val_loss, dataset_num):
               loc='upper right', fontsize=10)
     plt.grid(True, which='both', ls='--', alpha=0.5)
     
-    # 保存高分辨率图片
     save_dir = f"graphs/dataset{dataset_num}"
     os.makedirs(save_dir, exist_ok=True)
     plt.savefig(f"{save_dir}/learning_curve_per_trial_{replacement_num}.png", 
@@ -65,13 +60,13 @@ def analyze_all_configs(dataset_num=1):
         if X is None:
             continue
             
-        print(f"\n分析配置 {rep} replacements:")
+        print(f"\nAnalyzing {rep} replacements:")
         model = ANN()
         try:
             # 训练模型并获取损失曲线
             train_loss, val_loss = model.train(X, y)
             
-            # 获取训练集指标（新增部分）
+            # 获取训练集指标
             X_train_scaled = model.scaler.transform(X)  # 标准化训练数据
             train_pred = model.model.predict(X_train_scaled)
             train_mae = mean_absolute_error(y, train_pred)
@@ -96,25 +91,23 @@ def analyze_all_configs(dataset_num=1):
             )
             
         except Exception as e:
-            print(f"分析失败: {str(e)}")
+            print(f"Fail: {str(e)}")
     
-    # 更新对比报告（新增训练指标）
-    print(f"\n全局对比报告 (Dataset {dataset_num}):")
+    print(f"\nFinal report (Dataset {dataset_num}):")
     compare = sorted(reports.items(), key=lambda x: x[1]['best_val'])
     for rep, data in compare:
-        print(f"配置{rep:2d} replacements | "
-              f"训练MSE: {data['final_train']:.2e} | "
-              f"训练MAE: {data['train_mae']:.2e} | "
-              f"训练R²: {data['train_r2']:.2f} | "
-              f"验证MSE: {data['final_val']:.2e} | "
-              f"验证MAE: {data['val_mae']:.2e} | "
-              f"验证R²: {data['val_r2']:.2f} | "
-              f"收敛epoch: {data['converge_epoch']:3d}")
+        print(f"{rep:2d} replacements | "
+              f"Train MSE: {data['final_train']:.2e} | "
+              f"Trian MAE: {data['train_mae']:.2e} | "
+              f"Train R²: {data['train_r2']:.2f} | "
+              f"Validation MSE: {data['final_val']:.2e} | "
+              f"Validation MAE: {data['val_mae']:.2e} | "
+              f"Validation R²: {data['val_r2']:.2f} | "
+              f"Converge epoch: {data['converge_epoch']:3d}")
 
 def analyze_training_process(train_loss, val_loss, 
                              train_mae, train_r2,
                              val_mae, val_r2):
-    """训练过程诊断报告（新增训练指标参数）"""
     analysis = {
         'final_train': train_loss[-1],
         'final_val': val_loss[-1],
@@ -127,18 +120,18 @@ def analyze_training_process(train_loss, val_loss,
         'overfit_gap': (val_loss[-1] - train_loss[-1]) / train_loss[-1]
     }
     
-    print(f"训练诊断报告:")
-    print(f"├── 训练集指标:")
+    print(f"Report:")
+    print(f"├── Training set performance:")
     print(f"│   ├── MSE: {analysis['final_train']:.2e}")
     print(f"│   ├── MAE: {analysis['train_mae']:.2e}")
     print(f"│   └── R²: {analysis['train_r2']:.2f}")
-    print(f"├── 验证集指标:")
+    print(f"├── Validation set performance:")
     print(f"│   ├── MSE: {analysis['final_val']:.2e}")
     print(f"│   ├── MAE: {analysis['val_mae']:.2e}") 
     print(f"│   └── R²: {analysis['val_r2']:.2f}") 
-    print(f"├── 最佳验证MSE: {analysis['best_val']:.2e}")
-    print(f"├── 收敛epoch数: {analysis['converge_epoch']}")
-    print(f"├── 过拟合程度: {analysis['overfit_gap']:.1%}")
+    print(f"├── Best validation MSE: {analysis['best_val']:.2e}")
+    print(f"├── Converge epoch: {analysis['converge_epoch']}")
+    print(f"├── Overfitting gap: {analysis['overfit_gap']:.1%}")
     
     return analysis
 

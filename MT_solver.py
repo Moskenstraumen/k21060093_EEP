@@ -73,7 +73,6 @@ class IterativeMTSolver:
         return False, self.best_mse, self.best_mae, self.best_r2
 
     def full_optimization(self, num_replace, trials=50):
-        """完整优化流程"""
         # Ensure baseline uses exact same conditions
         self.baseline_model = ANN()
         self.baseline_model.train(self.initial_X, self.initial_y, verbose=False)
@@ -107,7 +106,7 @@ class IterativeMTSolver:
                 "R²": f"{r2:.2%}"
             })
 
-        # 保存最佳数据集
+        # Save best dataset
         results_dir = f"results/dataset{self.dataset_num}"
         os.makedirs(results_dir, exist_ok=True)
         np.save(f"{results_dir}/best_{num_replace}_X.npy", self.best_X)

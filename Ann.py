@@ -20,7 +20,7 @@ class ANN:
             'max_iter': 1,
             'random_state': 42
         }
-        self.max_epochs = 2000
+        self.max_epochs = 1000
         self.patience = 100
         self.validation_fraction = 0.2
         self.model = MLPRegressor(**self.base_config)
@@ -30,6 +30,7 @@ class ANN:
         self.y_val = None
         
     def train(self, X, y, verbose=True):
+        '''Predicts end-effector position (y_train) from joint angles (X_train)'''
         # Split data
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, 
