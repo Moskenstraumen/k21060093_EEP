@@ -17,7 +17,7 @@ def load_best_dataset(replacement_num, dataset_num):
 def plot_learning_curve(replacement_num, train_loss, val_loss, dataset_num):
     plt.figure(figsize=(10, 6))
     
-    # Use LaTeX font and style
+    # Style settings
     plt.style.use('seaborn-v0_8-paper')
     plt.rcParams.update({
         'font.family': 'serif',
@@ -26,24 +26,37 @@ def plot_learning_curve(replacement_num, train_loss, val_loss, dataset_num):
         'axes.titlesize': 16
     })
     
-    # Plot with consistent max epochs
-    max_epochs = 2000  # Match ANN.max_epochs
+    # Find best validation epoch
+    best_epoch = np.argmin(val_loss) + 1
+    
+    # Plot full training history
     epochs = np.arange(len(train_loss)) + 1
     
-    # Plot lines without markers
-    plt.semilogy(epochs, train_loss, '-', color='#1f77b4', lw=2, label='Training Loss')
-    plt.semilogy(epochs, val_loss, '--', color='#ff7f0e', lw=2, label='Validation Loss')
+    # Plot training curves with log scale
+    plt.semilogy(epochs, train_loss, '-', 
+                 color='#1f77b4', lw=2, 
+                 label='Training Loss')
+    plt.semilogy(epochs, val_loss, '-', 
+                 color='#ff7f0e', lw=2, 
+                 label='Validation Loss')
+    
+    # Add early stopping marker
+    plt.axvline(x=best_epoch, 
+                color='gray', 
+                linestyle='--', 
+                lw=1.5,
+                label=f'Best Epoch {best_epoch}')
     
     # Set axis limits
-    plt.xlim(0, max_epochs)
-    max_loss = max(train_loss[0], val_loss[0]) * 1.2
-    min_loss = min(np.min(train_loss), np.min(val_loss)) * 0.8
+    plt.xlim(0, len(train_loss) + 50)
+    max_loss = max(max(train_loss), max(val_loss)) * 2
+    min_loss = min(min(train_loss), min(val_loss)) * 0.5
     plt.ylim(min_loss, max_loss)
     
     # Add labels and title
-    plt.title(f'Learning Curves ({replacement_num} Replacements)', pad=15)
+    plt.title(f'Learning Curve ({replacement_num} Replacements)', pad=15)
     plt.xlabel('Epochs')
-    plt.ylabel('Mean Squared Error')
+    plt.ylabel('Mean Squared Error (log scale)')
     
     # Style the legend
     plt.legend(frameon=True, 
@@ -85,25 +98,22 @@ def analyze_all_configs(dataset_num=1):
         print(f"\nAnalyzing {rep} replacements:")
         model = ANN()
         try:
-            # 训练模型并获取损失曲线
+            # Train model
             train_loss, val_loss = model.train(X, y)
             
-            # 获取训练集指标
-            X_train_scaled = model.scaler.transform(X)  # 标准化训练数据
+            # Normalize training set
+            X_train_scaled = model.scaler.transform(X)
             train_pred = model.model.predict(X_train_scaled)
             train_mae = mean_absolute_error(y, train_pred)
             train_r2 = r2_score(y, train_pred)
             
-            # 获取验证集指标
+            # Normalize validation set
             X_val = model.scaler.transform(model.X_val)
             val_pred = model.model.predict(X_val)
             val_mae = mean_absolute_error(model.y_val, val_pred)
             val_r2 = r2_score(model.y_val, val_pred)
             
-            # 生成可视化
             plot_learning_curve(rep, train_loss, val_loss, dataset_num)
-            
-            # 生成诊断报告（传递新增参数）
             reports[rep] = analyze_training_process(
                 train_loss, val_loss,
                 train_mae=train_mae,

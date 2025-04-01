@@ -10,24 +10,22 @@ import warnings
 class ANN:
     def __init__(self):
         self.base_config = {
-            'hidden_layer_sizes': (16, 8), 
+            'hidden_layer_sizes': (8, 4), 
             'activation': 'tanh',  
             'solver': 'adam',
-            'alpha': 0.05, 
+            'alpha': 0.5, 
             'batch_size': 32, 
             'learning_rate': 'adaptive', 
-            'learning_rate_init': 0.001, 
+            'learning_rate_init': 0.009, 
             'max_iter': 1,
             'random_state': 42,
-            'beta_1': 0.9, 
-            'beta_2': 0.999,
             'epsilon': 1e-8,
             'tol': 1e-8
         }
-        self.max_epochs = 2000 
-        self.patience = 30 
+        self.max_epochs = 1000
+        self.patience = 100
         self.validation_fraction = 0.2
-        self.min_delta = 1e-4
+        self.min_delta = 1e-5
         self.model = MLPRegressor(**self.base_config)
         self.scaler = StandardScaler()
         self.X_val = None
@@ -59,9 +57,16 @@ class ANN:
         
         try:
             for epoch in range(self.max_epochs):
-                # More aggressive learning rate decay
-                if epoch > 0 and epoch % 300 == 0:
-                    self.model.learning_rate_init *= 0.5
+                # Smoother learning rate decay
+                if epoch > 0:
+                    if epoch < 500:
+                        self.model.learning_rate_init = 0.002
+                    elif epoch < 1000:
+                        self.model.learning_rate_init = 0.001
+                    elif epoch < 1500:
+                        self.model.learning_rate_init = 0.0005
+                    else:
+                        self.model.learning_rate_init = 0.0001
                 
                 # Train one epoch
                 self.model.partial_fit(X_train_scaled, y_train)
@@ -73,21 +78,31 @@ class ANN:
                 train_loss = np.mean((train_pred - y_train) ** 2)
                 val_loss = np.mean((val_pred - y_val) ** 2)
                 
-                # Smoothing for stability
+                # Smoothing
                 if train_losses:
-                    train_loss = 0.95 * train_losses[-1] + 0.05 * train_loss
-                    val_loss = 0.95 * val_losses[-1] + 0.05 * val_loss
+                    train_loss = 0.9 * train_losses[-1] + 0.1 * train_loss
+                    val_loss = 0.9 * val_losses[-1] + 0.1 * val_loss
                 
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
                 
-                # Early stopping check
-                # Multiple stopping conditions
+                # Early stopping with overfitting detection
+                if val_loss < best_val_loss: 
+                    best_val_loss = val_loss
+                    best_model = [w.copy() for w in self.model.coefs_]
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                
+                # Modified stopping conditions
+                # Only stop if either:
+                # 1. No improvement for long time, or
+                # 2. Clear sign of overfitting
                 if any([
-                    patience_counter >= self.patience,
-                    train_loss < 1e-6,
-                    epoch > 100 and val_loss > 2 * train_loss, 
-                    epoch > 200 and abs(train_loss - val_loss) < self.min_delta  # Convergence check
+                    patience_counter >= self.patience,  # No improvement for 100 epochs
+                    (epoch > 1000 and  # Only check overfitting after 1000 epochs
+                     val_loss > 2 * train_loss and  # Clear overfitting
+                     patience_counter > 20)  # Ensure it's not temporary
                 ]):
                     if verbose:
                         print(f"Early stopping at epoch {epoch}")
