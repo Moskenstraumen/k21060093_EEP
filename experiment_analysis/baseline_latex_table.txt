@@ -1,0 +1,9 @@
+\begin{tabular}{lrrr}
+\toprule
+method & mse & mae & r2 \\
+\midrule
+Uniform random & 0.023 & 0.119 & 0.874 \\
+Grid-based & 0.021 & 0.117 & 0.887 \\
+Gaussian mixture & 0.079 & 0.209 & 0.665 \\
+\bottomrule
+\end{tabular}

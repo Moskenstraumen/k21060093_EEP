@@ -7,36 +7,55 @@ import joblib
 import numpy as np
 import warnings
 
+# Disable convergence warning
+warnings.filterwarnings('ignore', category=UserWarning)
+
+class ExponentialLRScheduler:
+    def __init__(self, initial_lr, decay_rate=0.95, decay_steps=50):
+        self.initial_lr = initial_lr
+        self.decay_rate = decay_rate
+        self.decay_steps = decay_steps
+        
+    def get_lr(self, epoch):
+        """Calculate learning rate for given epoch"""
+        decay_factor = self.decay_rate ** (epoch / self.decay_steps)
+        return self.initial_lr * decay_factor
+
 class ANN:
     def __init__(self):
         self.base_config = {
-            'hidden_layer_sizes': (8, 4), 
-            'activation': 'tanh',  
+            'hidden_layer_sizes': (8, 4),
+            'activation': 'tanh',
             'solver': 'adam',
-            'alpha': 0.5, 
+            'alpha': 0.6, 
             'batch_size': 32, 
-            'learning_rate': 'adaptive', 
-            'learning_rate_init': 0.009, 
-            'max_iter': 1,
-            'random_state': 42,
-            'epsilon': 1e-8,
-            'tol': 1e-8
+            'learning_rate_init': 0.002, 
+            'max_iter': 1000, 
+            'random_state': 42, 
+            'early_stopping': True,
+            'validation_fraction': 0.2,
+            'n_iter_no_change': 50, 
+            'tol': 1e-5,
+            'warm_start': True  # Enable warm start for lr scheduling
         }
-        self.max_epochs = 1000
-        self.patience = 100
-        self.validation_fraction = 0.2
-        self.min_delta = 1e-5
         self.model = MLPRegressor(**self.base_config)
         self.scaler = StandardScaler()
         self.X_val = None
         self.y_val = None
-        
+
+        # Initialize learning rate scheduler
+        self.lr_scheduler = ExponentialLRScheduler(
+            initial_lr=self.base_config['learning_rate_init'],
+            decay_rate=0.95,
+            decay_steps=50
+        )
+
     def train(self, X, y, verbose=True):
         '''Predicts end-effector position (y_train) from joint angles (X_train)'''
         # Split data
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, 
-            test_size=self.validation_fraction, 
+            test_size=self.base_config['validation_fraction'], 
             random_state=42
         )
         
@@ -44,84 +63,70 @@ class ANN:
         self.X_val = X_val
         self.y_val = y_val
         
-        # Scale data with clipping for robustness
+        # Normalizing data
         X_train_scaled = np.clip(self.scaler.fit_transform(X_train), -3, 3)
         X_val_scaled = np.clip(self.scaler.transform(X_val), -3, 3)
         
-        # Training variables
-        best_val_loss = float('inf')
-        best_model = None
-        patience_counter = 0
-        train_losses = []
-        val_losses = []
-        
         try:
-            for epoch in range(self.max_epochs):
-                # Smoother learning rate decay
-                if epoch > 0:
-                    if epoch < 500:
-                        self.model.learning_rate_init = 0.002
-                    elif epoch < 1000:
-                        self.model.learning_rate_init = 0.001
-                    elif epoch < 1500:
-                        self.model.learning_rate_init = 0.0005
-                    else:
-                        self.model.learning_rate_init = 0.0001
-                
-                # Train one epoch
-                self.model.partial_fit(X_train_scaled, y_train)
-                
-                # Compute losses
+            config = self.base_config.copy()
+            config.update({
+                'early_stopping': False,
+                'validation_fraction': 0.0,
+                'max_iter': 1  # Train one iteration at a time
+            })
+            
+            # Initialize model
+            self.model = MLPRegressor(**config)
+            
+            train_losses = []
+            val_losses = []
+            best_val_loss = float('inf')
+            early_stop_epoch = None
+            patience_counter = 0
+            current_lr = self.base_config['learning_rate_init']
+            
+            # Train for all epochs while tracking early stopping point
+            for epoch in range(self.base_config['max_iter']):
+                # Update learning rate
+                current_lr = self.lr_scheduler.get_lr(epoch)
+                self.model.learning_rate_init = current_lr
+                    
+                # Fit one epoch
+                self.model.fit(X_train_scaled, y_train)
+                    
+                # Calculate losses
                 train_pred = self.model.predict(X_train_scaled)
                 val_pred = self.model.predict(X_val_scaled)
-                
+                    
                 train_loss = np.mean((train_pred - y_train) ** 2)
                 val_loss = np.mean((val_pred - y_val) ** 2)
-                
-                # Smoothing
-                if train_losses:
-                    train_loss = 0.9 * train_losses[-1] + 0.1 * train_loss
-                    val_loss = 0.9 * val_losses[-1] + 0.1 * val_loss
-                
+                    
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
-                
-                # Early stopping with overfitting detection
-                if val_loss < best_val_loss: 
+                    
+                # Track early stopping point
+                if val_loss < best_val_loss - self.base_config['tol']:
                     best_val_loss = val_loss
-                    best_model = [w.copy() for w in self.model.coefs_]
                     patience_counter = 0
                 else:
                     patience_counter += 1
-                
-                # Modified stopping conditions
-                # Only stop if either:
-                # 1. No improvement for long time, or
-                # 2. Clear sign of overfitting
-                if any([
-                    patience_counter >= self.patience,  # No improvement for 100 epochs
-                    (epoch > 1000 and  # Only check overfitting after 1000 epochs
-                     val_loss > 2 * train_loss and  # Clear overfitting
-                     patience_counter > 20)  # Ensure it's not temporary
-                ]):
-                    if verbose:
-                        print(f"Early stopping at epoch {epoch}")
-                    break
-                
-                if verbose and epoch % 100 == 0:
-                    print(f"Epoch {epoch}: "
-                          f"train={train_loss:.6f}, val={val_loss:.6f}, "
-                          f"lr={self.model.learning_rate_init:.6f}")
-            
-            # Restore best model
-            if best_model is not None:
-                self.model.coefs_ = best_model
-            
-            return np.array(train_losses), np.array(val_losses)
-            
+                    
+                # Mark early stopping point but continue training
+                if patience_counter >= self.base_config['n_iter_no_change'] and early_stop_epoch is None:
+                        early_stop_epoch = epoch + 1 - self.base_config['n_iter_no_change']
         except Exception as e:
-            print(f"Training failed: {str(e)}")
-            return np.array([]), np.array([])
+            print(f"An error occurred during training: {str(e)}")
+            return [], [], None
+        
+        if verbose:
+            print(f"\nTraining Summary:")
+            print(f"├── Total epochs: {len(train_losses)}")
+            print(f"├── Early stopping epoch: {early_stop_epoch}")
+            print(f"├── Initial LR: {self.base_config['learning_rate_init']:.6f}")
+            print(f"├── Final LR: {current_lr:.6f}")
+            print(f"└── Best validation MSE: {best_val_loss:.6f}")
+        
+        return np.array(train_losses), np.array(val_losses), early_stop_epoch
 
     def evaluate(self, X_test, y_test):
         X_scaled = self.scaler.transform(X_test)

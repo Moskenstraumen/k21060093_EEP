@@ -1,7 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from generator import generate_initial_data
-from optimal_generator import generate_optimal_data
 from MT_solver import IterativeMTSolver
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import as_completed

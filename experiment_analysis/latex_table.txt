@@ -1,0 +1,9 @@
+\begin{tabular}{lrrrrr}
+\toprule
+method & best_replacements & initial_mse & best_mse & improvement & final_r2 \\
+\midrule
+Uniform random & 10 & 0.018 & 0.012 & 36.619 & 0.938 \\
+Grid-based & 5 & 0.019 & 0.013 & 31.563 & 0.933 \\
+Gaussian mixture & 15 & 0.127 & 0.051 & 60.081 & 0.772 \\
+\bottomrule
+\end{tabular}
