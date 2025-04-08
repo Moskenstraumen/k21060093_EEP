@@ -2,8 +2,8 @@
 \toprule
 method & best_replacements & initial_mse & best_mse & improvement & final_r2 \\
 \midrule
-Uniform random & 20 & 0.020 & 0.009 & 53.030 & 0.960 \\
-Grid-based & 10 & 0.021 & 0.009 & 58.966 & 0.960 \\
-Gaussian mixture & 20 & 0.092 & 0.060 & 34.523 & 0.726 \\
+Uniform random & 10 & 0.023 & 0.012 & 50.070 & 0.938 \\
+Grid-based & 5 & 0.021 & 0.013 & 37.466 & 0.933 \\
+Gaussian mixture & 15 & 0.079 & 0.051 & 35.674 & 0.772 \\
 \bottomrule
 \end{tabular}

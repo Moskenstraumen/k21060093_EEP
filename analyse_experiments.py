@@ -95,7 +95,7 @@ def create_comparison_plots(results):
 def load_baseline_mse(method_id):
     """Load baseline MSE from solver's results"""
     try:
-        # Load the initial solver results which contains the true baseline MSE
+        # Load the initial solver results
         solver_results = np.load(f"results/dataset{method_id}/solver_baseline.npy")
         return float(solver_results)
     except FileNotFoundError:
@@ -138,7 +138,7 @@ def analyze_initial_datasets():
         mae = mean_absolute_error(y_opt, y_pred)
         r2 = r2_score(y_opt, y_pred)
         
-        # Store metrics using solver's baseline MSE
+        # Store metrics
         baseline_metrics['method'].append(method_name)
         baseline_metrics['mse'].append(baseline_mse)
         baseline_metrics['mae'].append(mae)
@@ -153,7 +153,7 @@ def analyze_initial_datasets():
     return pd.DataFrame(baseline_metrics), baseline_results
 
 def generate_summary_tables(results, baseline_results):
-    """Generate summary tables using consistent baseline values"""
+    """Generate summary tables"""
     summary = {
         'method': [],
         'best_replacements': [],
@@ -164,7 +164,6 @@ def generate_summary_tables(results, baseline_results):
     }
     
     for method in results:
-        # Use stored baseline MSE instead of results[method][0]['mse']
         initial_mse = baseline_results[method]['mse']
         best_mse = float('inf')
         best_rep = 0
@@ -178,7 +177,7 @@ def generate_summary_tables(results, baseline_results):
         
         summary['method'].append(method)
         summary['best_replacements'].append(best_rep)
-        summary['initial_mse'].append(initial_mse)  # Consistent baseline
+        summary['initial_mse'].append(initial_mse)
         summary['best_mse'].append(best_mse)
         summary['improvement'].append(improvement)
         summary['final_r2'].append(results[method][best_rep]['r2'])
@@ -195,13 +194,15 @@ def analyse_learning_curves(dataset_num=None):
     }
     
     # Get best replacements for each method
+    # These values are placeholders 
+    # They can be adjusted based on actual results from experiment.py
     best_configs = {
-        "Uniform random": 20, 
-        "Grid-based": 10,
-        "Gaussian mixture": 20
+        "Uniform random": 10, 
+        "Grid-based": 5,
+        "Gaussian mixture": 15
     }
     
-    print("\n="*80)
+    print("="*80)
     print("\nBest Configuration Learning Curves:")
     
     for method_id, method_name in methods.items():

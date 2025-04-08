@@ -104,11 +104,11 @@ def run_comparison(trials=50, dataset_num=1):
     solver = IterativeMTSolver(initial_data, optimal_data, dataset_num=dataset_num)
     baseline_mse = solver.baseline_mse
     
-    # Save baseline MSE for consistency
+    # Save baseline MSE
     np.save(f"results/dataset{dataset_num}/solver_baseline.npy", baseline_mse)
     print(f"Baseline MSE: {baseline_mse:.6f}")
 
-    # Run in parallel with shared baseline
+    # Run in parallel
     with ProcessPoolExecutor(max_workers=14) as executor:
         futures = {
             executor.submit(
@@ -127,7 +127,6 @@ def run_comparison(trials=50, dataset_num=1):
                 final_results[rep] = result
                 analyze_results(rep, result, dataset_num)
 
-    # Plot with fixed marker handling
     plt.figure(figsize=(10, 6))
     
     ordered_reps = sorted([rep for rep in final_results.keys() if rep > 0])

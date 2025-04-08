@@ -131,15 +131,6 @@ def analyze_training_process(train_loss, val_loss,
     min_val_loss = val_loss[best_val_epoch - 1]
     overfit_ratio = (val_loss[-1] - min_val_loss) / min_val_loss * 100
     
-    '''print(f"\nTraining Summary:")
-    print(f"    Convergence:")
-    print(f"    Total epochs: {len(train_loss)}")
-    print(f"    Best epoch: {best_val_epoch}")
-    print(f"    Overfitting: {overfit_ratio:+.1f}%")
-    print(f"Final Performance:")
-    print(f"    Train MSE: {train_loss[-1]:.2e} (R²: {train_r2:.2f})")
-    print(f"    Val MSE: {val_loss[-1]:.2e} (R²: {val_r2:.2f})")'''
-    
     return {
         'final_train': train_loss[-1],
         'final_val': val_loss[-1],

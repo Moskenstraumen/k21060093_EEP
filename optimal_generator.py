@@ -3,8 +3,9 @@ import numpy as np
 from generator import forward_kinematics
 
 def generate_optimal_data(n_samples=200):
-     # Input: joinst angles in radians
+    # Input: joinst angles in radians
     X = np.random.uniform(0, np.pi/2, (n_samples, 2))
+    
     # Ouput: end-effector position
     y = forward_kinematics(X)  
     

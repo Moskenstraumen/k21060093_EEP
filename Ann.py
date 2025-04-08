@@ -32,7 +32,7 @@ class ANN:
             'batch_size': 32, 
             'learning_rate_init': 0.002, 
             'max_iter': 1000, 
-            'random_state': 24, 
+            'random_state': 42, 
             'early_stopping': True,
             'validation_fraction': 0.2,
             'n_iter_no_change': 50, 
@@ -57,7 +57,7 @@ class ANN:
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, 
             test_size=self.base_config['validation_fraction'], 
-            random_state=24
+            random_state=42
         )
         # Store validation data
         self.X_val = X_val

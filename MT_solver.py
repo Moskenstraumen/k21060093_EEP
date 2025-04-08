@@ -41,7 +41,7 @@ class IterativeMTSolver:
         if num_replace == 0:
             return False, self.best_mse, self.best_mae, self.best_r2
         
-        # Generate replacement samples
+        # Generate KDE replacement samples
         np.random.seed(trial_id)
         replace_idx = np.random.choice(len(self.current_X), num_replace, False)
         new_samples = generate_replacement(self.current_X, num_replace, trial_id)
