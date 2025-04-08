@@ -1,3 +1,4 @@
+# Ann.py
 from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -31,7 +32,7 @@ class ANN:
             'batch_size': 32, 
             'learning_rate_init': 0.002, 
             'max_iter': 1000, 
-            'random_state': 42, 
+            'random_state': 24, 
             'early_stopping': True,
             'validation_fraction': 0.2,
             'n_iter_no_change': 50, 
@@ -56,9 +57,8 @@ class ANN:
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, 
             test_size=self.base_config['validation_fraction'], 
-            random_state=42
+            random_state=24
         )
-        
         # Store validation data
         self.X_val = X_val
         self.y_val = y_val
@@ -113,18 +113,18 @@ class ANN:
                     
                 # Mark early stopping point but continue training
                 if patience_counter >= self.base_config['n_iter_no_change'] and early_stop_epoch is None:
-                        early_stop_epoch = epoch + 1 - self.base_config['n_iter_no_change']
+                    early_stop_epoch = epoch + 1 - self.base_config['n_iter_no_change']
         except Exception as e:
             print(f"An error occurred during training: {str(e)}")
             return [], [], None
         
         if verbose:
             print(f"\nTraining Summary:")
-            print(f"├── Total epochs: {len(train_losses)}")
-            print(f"├── Early stopping epoch: {early_stop_epoch}")
-            print(f"├── Initial LR: {self.base_config['learning_rate_init']:.6f}")
-            print(f"├── Final LR: {current_lr:.6f}")
-            print(f"└── Best validation MSE: {best_val_loss:.6f}")
+            print(f"Total epochs: {len(train_losses)}")
+            print(f"Early stopping epoch: {early_stop_epoch}")
+            print(f"Initial LR: {self.base_config['learning_rate_init']:.6f}")
+            print(f"Final LR: {current_lr:.6f}")
+            print(f"Best validation MSE: {best_val_loss:.6f}")
         
         return np.array(train_losses), np.array(val_losses), early_stop_epoch
 

@@ -1,3 +1,4 @@
+# MT_solver.py
 import numpy as np
 import os
 from tqdm import tqdm
@@ -53,7 +54,7 @@ class IterativeMTSolver:
         if len(temp_y.shape) == 1:
             temp_y = temp_y.reshape(-1, 1)
         
-        # Train new model - let ANN handle normalization
+        # Train new model
         model = ANN()
         model.train(temp_X, temp_y, verbose=False)
         

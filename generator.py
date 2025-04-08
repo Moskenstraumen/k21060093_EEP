@@ -1,3 +1,4 @@
+# generator.py
 import numpy as np
 import os
 from utils import forward_kinematics
@@ -5,17 +6,17 @@ from utils import forward_kinematics
 def generate_initial_data(method=1):
     """Generate and save the initial dataset using different methods"""
     np.random.seed(42)
-    n_samples = 200  # Fixed dataset size
+    n_samples = 200  # Fixed dataset size for all methods
     
     if method == 1:
-        # Original uniform random method
+        # Uniform random sampling
         X = np.random.uniform(
             low=[0, -np.pi/2],
             high=[np.pi/2, np.pi/2],
             size=(n_samples, 2)
         )
     elif method == 2:
-        # Grid-based sampling with exact size
+        # Grid-based sampling
         grid_points = int(np.sqrt(n_samples))  # ~14x14 grid
         x1 = np.linspace(0, np.pi/2, grid_points)
         x2 = np.linspace(-np.pi/2, np.pi/2, grid_points)
@@ -41,7 +42,7 @@ def generate_initial_data(method=1):
         X += np.random.normal(0, 0.05, X.shape)
         X = np.clip(X, [0, -np.pi/2], [np.pi/2, np.pi/2])
     else:
-        # Gaussian mixture with exact size
+        # Gaussian mixture
         centers = np.array([
             [np.pi/4, 0],
             [np.pi/6, np.pi/4],

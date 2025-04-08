@@ -2,8 +2,8 @@
 \toprule
 method & mse & mae & r2 \\
 \midrule
-Uniform random & 0.023 & 0.119 & 0.874 \\
-Grid-based & 0.021 & 0.117 & 0.887 \\
-Gaussian mixture & 0.079 & 0.209 & 0.665 \\
+Uniform random & 0.020 & 0.111 & 0.893 \\
+Grid-based & 0.021 & 0.118 & 0.885 \\
+Gaussian mixture & 0.092 & 0.218 & 0.685 \\
 \bottomrule
 \end{tabular}

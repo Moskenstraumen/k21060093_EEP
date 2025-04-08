@@ -1,3 +1,4 @@
+# Experiment.py
 import subprocess
 import sys
 import os
@@ -71,7 +72,7 @@ def run_experiment():
         os.makedirs(f"graphs/dataset{i}", exist_ok=True)
     os.makedirs("saved_data", exist_ok=True)
     
-    # Generate all datasets first
+    # Generate all datasets
     if not run_script("generator.py"):
         print("Dataset generation failed")
         return

@@ -1,18 +1,20 @@
+# utils.py
 import numpy as np
 from scipy.stats import gaussian_kde
 
 def forward_kinematics(joint_angles):
-    """正运动学计算"""
+    """Compute end-effector position from joint angles using forward kinematics"""
     l1, l2 = 1.0, 0.8
     theta1 = np.clip(joint_angles[:,0], 0, np.pi/2)
     theta2 = np.clip(joint_angles[:,1], -np.pi/2, np.pi/2)
     x = l1 * np.cos(theta1) + l2 * np.cos(theta1 + theta2)
     y = l1 * np.sin(theta1) + l2 * np.sin(theta1 + theta2)
-    return np.column_stack((x, y)) + np.random.normal(0, 1e-6, size=(len(x),2))  # 防止零方差
+    return np.column_stack((x, y)) + np.random.normal(0, 1e-6, size=(len(x),2))
 
 def generate_replacement(base_data, num_replace, seed):
-    """生成替换样本"""
+    """Generate replacement sample using Gaussian KDE"""
     np.random.seed(seed)
+    
     # Boundry case protection
     if num_replace <= 0:  
         return np.empty((0, 2))

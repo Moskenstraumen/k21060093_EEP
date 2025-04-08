@@ -1,3 +1,4 @@
+# analyze_replacement_trial.py
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -17,7 +18,6 @@ def load_best_dataset(replacement_num, dataset_num):
 def plot_learning_curve(replacement_num, train_loss, val_loss, early_stop_epoch, dataset_num):
     plt.figure(figsize=(10, 6))
     
-    # Style settings
     plt.style.use('seaborn-v0_8-paper')
     plt.rcParams.update({
         'font.family': 'serif',
@@ -26,7 +26,6 @@ def plot_learning_curve(replacement_num, train_loss, val_loss, early_stop_epoch,
         'axes.titlesize': 16
     })
     
-    # Plot training history
     epochs = np.arange(1, len(train_loss) + 1)
     
     # Plot curves with log scale
@@ -37,25 +36,22 @@ def plot_learning_curve(replacement_num, train_loss, val_loss, early_stop_epoch,
                 color='#ff7f0e', lw=2, 
                 label='Validation Loss')
     
-    # Mark early stopping point with vertical line
+    # Mark early stopping point
     if early_stop_epoch:
         plt.axvline(x=early_stop_epoch, 
                    color='gray', 
                    linestyle='--', 
                    lw=1.5,
                    label=f'Early Stopping (epoch {early_stop_epoch})')
-    
-    # Set axis limits
+
     plt.xlim(0, len(train_loss))
     all_losses = np.concatenate([train_loss, val_loss])
     plt.ylim(np.min(all_losses) * 0.5, np.max(all_losses) * 2)
     
-    # Add labels and title
     plt.title(f'Learning Curve ({replacement_num} Replacements)', pad=15)
     plt.xlabel('Epochs')
     plt.ylabel('Mean Squared Error (log scale)')
-    
-    # Style the legend
+
     plt.legend(frameon=True, 
               fancybox=True,
               edgecolor='black',
@@ -63,11 +59,9 @@ def plot_learning_curve(replacement_num, train_loss, val_loss, early_stop_epoch,
               framealpha=1.0,
               loc='upper right')
     
-    # Customize grid for log scale
     plt.grid(True, which='major', linestyle='--', alpha=0.7)
     plt.grid(True, which='minor', linestyle=':', alpha=0.4)
     
-    # Save with high quality
     save_dir = f"graphs/dataset{dataset_num}"
     os.makedirs(save_dir, exist_ok=True)
     plt.savefig(f"{save_dir}/learning_curve_per_trial_{replacement_num}.png",
@@ -138,13 +132,13 @@ def analyze_training_process(train_loss, val_loss,
     overfit_ratio = (val_loss[-1] - min_val_loss) / min_val_loss * 100
     
     '''print(f"\nTraining Summary:")
-    print(f"├── Convergence:")
-    print(f"│   ├── Total epochs: {len(train_loss)}")
-    print(f"│   ├── Best epoch: {best_val_epoch}")
-    print(f"│   └── Overfitting: {overfit_ratio:+.1f}%")
-    print(f"├── Final Performance:")
-    print(f"│   ├── Train MSE: {train_loss[-1]:.2e} (R²: {train_r2:.2f})")
-    print(f"│   └── Val MSE: {val_loss[-1]:.2e} (R²: {val_r2:.2f})")'''
+    print(f"    Convergence:")
+    print(f"    Total epochs: {len(train_loss)}")
+    print(f"    Best epoch: {best_val_epoch}")
+    print(f"    Overfitting: {overfit_ratio:+.1f}%")
+    print(f"Final Performance:")
+    print(f"    Train MSE: {train_loss[-1]:.2e} (R²: {train_r2:.2f})")
+    print(f"    Val MSE: {val_loss[-1]:.2e} (R²: {val_r2:.2f})")'''
     
     return {
         'final_train': train_loss[-1],
